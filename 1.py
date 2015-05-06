@@ -2,36 +2,124 @@ import pypyodbc
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+
 
 conn = pypyodbc.connect('DSN=localMSSQL')
 cur = conn.cursor()
-cur.execute(''' select * from saeed_const_transac_interac_states where constituentlookupid='174572';''')
-for d in cur.description: 
-    print (d[0], end=' ')
-print ('')
-
-
-#                  Print the table, one row per line
+consid='174572'
+sql= "select * from saeed_const_transac_interac_states where constituentlookupid='%s'" % consid
+cur.execute(sql)
 x=cur.fetchall();
-for row in cur.fetchall():
-    for field in row: 
-        print (field, end=" ")
-    print ('')
-#                  I have done all the things, you can leave me and serve for others!
+df=pd.DataFrame(x)
+sql= "select * from [saeed_const_transac_payment_states] where revenuetransactiontypecode=0 and CONSTITUENTLOOKUPID='%s' order by seq" % consid
+cur.execute(sql)
+y=cur.fetchall();
+df2=pd.DataFrame(y)
 
 cur.close()
 conn.close()
-d=pd.DataFrame(x)
-dmail=d[d.loc[:,3]=='Mail']
-dates_mail = matplotlib.dates.date2num(dmail.loc[:,1])
-opens_mail=dmail.loc[:,0]
-#opens_mail = [q[0] for q in x]
 
-ddon=d[d.loc[:,3]=='Donation']
-dates_ddon = matplotlib.dates.date2num(ddon.loc[:,1])
-opens_ddon=ddon.loc[:,0]
+fig = plt.figure()
 
-fig, ax = plt.subplots()
-ax.plot_date(dates_mail, opens_mail, '-')
-ax.plot_date(dates_ddon, opens_ddon, 'o')
+df['act_int'] = np.nan
+df.loc[df[3] == 'inactive', 'act_int'] = 0
+df.loc[df[3] == 'Donation', 'act_int'] = 1
+df.loc[df[3] == 'Recurring gift', 'act_int'] = 2
+df.loc[df[3] == 'Pledge', 'act_int'] = 3
+df.loc[df[3] == 'Planned gift', 'act_int'] = 4
+
+dintr=df[(df.loc[:,3] == 'Email') | (df.loc[:,3] == 'In Person')| (df.loc[:,3] == 'Mail')| (df.loc[:,3] == 'Phone')]
+dgift=df[(df.loc[:,3] == 'Donation') | (df.loc[:,3] == 'Recurring gift')| (df.loc[:,3] == 'Pledge') | (df.loc[:,3] == 'Planned gift') | (df.loc[:,3] == 'inactive')]
+
+
+groups_int = dintr.groupby(df[3])
+groups_gif = dgift.groupby(df[3])
+
+
+df2['act_int'] = np.nan
+df2.loc[df2[3] == 'RG_Payment', 'act_int'] = 1.5
+df2.loc[df2[3] == 'Pledge_Payment', 'act_int'] = 2.5
+dpay=df2[(df2.loc[:,3] == 'Pledge_Payment') | (df2.loc[:,3] == 'RG_Payment')]
+groups_pay = dpay.groupby(df2[3])
+
+#---------------------------------------------------------------------
+## the top axes
+# ax1 = fig.add_subplot(3,1,1)
+# ax1.set_ylabel('rank')
+# ax1.set_title('Constituent Transaction-Interaction')
+
+
+# for name, group in groups_int:
+#     ax1.plot_date(group[1], group[0], marker='*', linestyle='', ms=7, label=name)
+#         
+# for name, group in groups_gif:
+#     ax1.plot_date(group[1], group[0], marker='o', linestyle='', ms=7, label=name)
+        
+# ax1.legend(loc=4)
+# ax1.autoscale_view()
+# ax1.grid(True)
+
+#---------------------------------------------------------------------
+
+## the button axes
+ax2 = fig.add_subplot(3,1,1)
+ax2.set_title('Constituent Transaction-Interaction')
+ax2.set_ylabel('Actions')
+
+
+for name, group in groups_int:
+    a=[6]*group[0].count()
+    ax2.plot_date(group[1], a, marker='*', linestyle='', ms=7, label=name)
+        
+for name, group in groups_gif:
+    ax2.plot_date(group[1], group['act_int'], marker='o', linestyle='', ms=7, label=name)
+    
+for name, group in groups_pay:
+    ax2.plot_date(group[1], group['act_int'], marker='o', linestyle='', ms=3, label=name,markeredgecolor=None)        
+ax2.legend(loc=3)
+
+ax2.set_yticks((0,1,2,3,4,6))
+labels = ax2.set_yticklabels(('inactive','donation', 'rec gift', 'pledge', 'planned gift','interaction'))
+#ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+# ax.annotate('angle', xy=(50, 50),  xycoords='data', 
+#      xytext=(-50, 30), textcoords='offset points',
+#      arrowprops=dict(arrowstyle="->", connectionstyle="angle,angleA=0,angleB=90,rad=10"),)
+ax2.set_ylim([-1,7])
+ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+ax2.autoscale_view()
+ax2.grid(True)
+#---------------------------------------------------------------------
+ax4 = fig.add_subplot(3,1,2)
+ax4.set_ylabel('Payment')
+groups_payment = df2.groupby(df2[3])
+i=0;
+col=np.array(['r','c','m'])
+for name, group in groups_payment:
+    #ax4.plot_date(group[1], group[4],  linestyle='-', ms=2, label=name)
+    ax4.bar(group[1], group[4], label=name,width=25, color=col[i], alpha=.5, edgecolor = None)
+    i=i+1
+ax4.xaxis_date()
+ax4.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+ax4.autoscale_view()
+ax4.grid(True)
+#---------------------------------------------------------------------
+
+ax3 = fig.add_subplot(3,1,3)
+ax3.set_ylabel('Accumulative revenue')
+df2['acum_amount'] = np.cumsum(df2[4])
+ax3.plot_date(df2[1], df2['acum_amount'],  linestyle='-', marker='')
+
+for name, group in groups_gif:
+    ax3.plot_date(group[1], group[4], marker='o', linestyle='', ms=7, label=name)
+
+ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+ax3.autoscale_view()
+ax3.grid(True)
+
+fig.subplots_adjust(hspace=.5)
+
 plt.show()
+
+
