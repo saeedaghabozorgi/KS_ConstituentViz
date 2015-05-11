@@ -8,7 +8,7 @@ import numpy as np
 conn = pypyodbc.connect('DSN=localMSSQL')
 cur = conn.cursor()
 consid='70434'
-sql= "select * from saeed_const_transac_interac_states where constituentlookupid='%s'" % consid
+sql= "select * from saeed_Const_Transac_Interaction_BU_Appeal_states where constituentlookupid='%s'" % consid
 cur.execute(sql)
 x=cur.fetchall();
 df=pd.DataFrame(x)
@@ -33,9 +33,11 @@ dintr=df[(df.loc[:,3] == 'Email') | (df.loc[:,3] == 'In Person')| (df.loc[:,3] =
 dgift=df[(df.loc[:,3] == 'Donation') | (df.loc[:,3] == 'Recurring gift')| (df.loc[:,3] == 'Pledge') | (df.loc[:,3] == 'Planned gift') | (df.loc[:,3] == 'inactive')]
 
 
+
+
 groups_int = dintr.groupby(df[3])
 groups_gif = dgift.groupby(df[3])
-
+groups_BU = dgift.groupby(df[4])
 
 df2['act_int'] = np.nan
 df2.loc[df2[3] == 'RG_Payment', 'act_int'] = 1.5
@@ -67,38 +69,38 @@ ax2 = fig.add_subplot(311)
 ax2.set_title('Constituent Transaction-Interaction %s' % consid )
 ax2.set_ylabel('Actions')
 
-
+i=0; 
 for name, group in groups_int:
-    a=[6]*group[0].count()
-    ax2.plot_date(group[1], a, marker='*', linestyle='', ms=7, label=name)
+    a=[7+i*0.1]*group[0].count()
+    ax2.plot_date(group[2], a, marker='|', linestyle='', ms=7, label=name)
+    i=i+1
+i=0;    
+for name, group in groups_BU:
+    b=[6+i*0.1]*group[2].count()
+    rects=ax2.plot_date(group[2], b, marker='*', linestyle='', ms=7, label=name, markeredgewidth = 0) 
+    i=i+1
+     
 i=0;        
 for name, group in groups_gif:
-    ax2.plot_date(group[1], group['act_int'], marker='o', linestyle='', ms=7, label=name, color=col[i])
+    ax2.plot_date(group[2], group['act_int'], marker='o', linestyle='', ms=7, label=name, color=col[i])
     i=i+1
-i=1;
+
 for name, group in groups_pay:
     rects=ax2.plot_date(group[1], group['act_int'], marker='o', linestyle='', ms=3, label=name,markeredgecolor=None) 
-    i=i+1  
-   
+
 ax2.legend(loc=3)
 
-ax2.set_yticks((0,1,2,3,4,6))
-labels = ax2.set_yticklabels(('inactive','donation', 'rec gift', 'pledge', 'planned gift','interaction'))
+ax2.set_yticks((0,1,2,3,4,6,7))
+labels = ax2.set_yticklabels(('inactive','donation', 'rec gift', 'pledge', 'planned gift','BU','interaction'))
 #ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
 # ax.annotate('angle', xy=(50, 50),  xycoords='data', 
 #      xytext=(-50, 30), textcoords='offset points',
 #      arrowprops=dict(arrowstyle="->", connectionstyle="angle,angleA=0,angleB=90,rad=10"),)
-ax2.set_ylim([-1,7])
+ax2.set_ylim([-1,8])
 ax2.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
 #ax2.autoscale_view()
 ax2.grid(True)
-
-
-
-
-
-
 
 
 #---------------------------------------------------------------------
@@ -128,7 +130,7 @@ ax3.plot_date(df2[1], df2['acum_amount'],  linestyle='-', marker='')
 
 i=0
 for name, group in groups_gif:
-    ax3.plot_date(group[1], group[4], marker='o', linestyle='', ms=7, color=col[i],label=name)
+    ax3.plot_date(group[2], group[6], marker='o', linestyle='', ms=7, color=col[i],label=name)
     i=i+1
 ax3.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
 #ax3.autoscale_view()
