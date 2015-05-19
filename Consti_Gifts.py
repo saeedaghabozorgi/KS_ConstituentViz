@@ -1,3 +1,5 @@
+# to visualize a constituent behaviour in terms of actions, intractions, BU
+
 import pypyodbc
 import matplotlib
 import matplotlib.pyplot as plt
