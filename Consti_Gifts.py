@@ -9,7 +9,7 @@ import numpy as np
 
 conn = pypyodbc.connect('DSN=localMSSQL')
 cur = conn.cursor()
-consid='70434'
+consid='99971'
 sql= "select * from saeed_Const_Transac_Interaction_BU_Appeal_states where constituentlookupid='%s'" % consid
 cur.execute(sql)
 x=cur.fetchall();

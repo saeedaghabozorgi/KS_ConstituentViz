@@ -10,7 +10,7 @@ import matplotlib.cm as cm
 
 # setup Lambert Conformal basemap.
 #m = Basemap(projection='cyl', resolution='l', area_thresh = 100000.0 , llcrnrlon=-84, llcrnrlat=40, urcrnrlon=-74, urcrnrlat=50  )
-m = Basemap(projection='cyl', resolution='l', area_thresh = 100000.0 , llcrnrlon=-94, llcrnrlat=40, urcrnrlon=-70, urcrnrlat=50  )
+m = Basemap(projection='cyl', resolution='l', area_thresh = 10000.0 , llcrnrlon=-81, llcrnrlat=40, urcrnrlon=-77, urcrnrlat=50  )
 
 #lat_0=43.723452,lon_0=-79.431616
 # draw coastlines.
@@ -38,24 +38,19 @@ m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 
 conn = pypyodbc.connect('DSN=localMSSQL')
 cur = conn.cursor()
-sql= "select top 1000 constituentlookupid,post_code,latitude, longitude from [saeed_cons_spatial] where post_code is not null" 
+sql= "select top 10000 constituentlookupid,post_code,latitude, longitude,gender from [saeed_cons_spatial] where post_code is not null" 
 cur.execute(sql)
 dd=cur.fetchall();
 df=pd.DataFrame(dd)
-lons=df[3].values
-lats=df[2].values
-x, y = m(lons,lats)
-
-val=np.arange(1,len(x))
-f = val.astype(float)/val.max()
-norm = colors.Normalize(f.min(), f.max())
-col = cm.jet(norm(f))
-v=np.array( [1.00000  , 0.8954 ,  0.00000 ,  1.0000])
-
-#m.plot(x, y,'ro', markersize=3, linestyle='',color=v, alpha=0.5)
 
 
-
-m.scatter(x.tolist(), y.tolist(), color=col, alpha=0.05,linewidth='0')
-#cbar = m.colorbar(cs,location='bottom',pad="5%")
+colors = list("rgb")
+groups_gend = df.groupby(df[4])
+for name, group in groups_gend:
+    lons=group[3].values
+    lats=group[2].values
+    gend=group[4].values
+    x, y = m(lons,lats)
+    m.scatter(x.tolist(), y.tolist(), color=colors.pop(), alpha=0.05,linewidth='0', label=name)
+plt.legend()
 plt.show()
